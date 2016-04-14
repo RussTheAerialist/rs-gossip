@@ -1,0 +1,5 @@
+message Client {
+  required string name = 1;
+  required string ip = 2;
+  required bool is_controller = 3;
+}

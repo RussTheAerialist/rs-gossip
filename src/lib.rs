@@ -1,39 +1,43 @@
-pub struct GossipDiscovery {
-    port: u16,
-    heartbeat: u32,
+extern crate protobuf;
+
+// Protobuf generated files
+mod proto_client;
+
+pub trait Versioned {
+  fn version(&self) -> i32;
 }
 
-impl GossipDiscovery {
-    /// Constructs a new `GossipDiscovery`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gossip::GossipDiscovery;
-    /// let discovery = GossipDiscovery::new(9999);
-    /// ```
-    pub fn new(port: u16) -> GossipDiscovery {
-        GossipDiscovery {
-            heartbeat: 0,
-            port: port,
-        }
-    }
+pub trait HasMerge {
+  fn merge(&self, other: &Self) -> Self;
+}
 
-    /// Generate a copy of the current GossipDiscovery with the next
-    /// heartbeat
-    ///
-    /// # Examples
-    /// ```
-    /// use gossip::GossipDiscovery;
-    /// let discovery = GossipDiscovery::new(9999);
-    /// let nextBeat = discovery.next();
-    /// assert_eq!(discovery.get_heartbeat()+1, nextBeat.get_heartbeat());
-    /// ```
-    pub fn next(&self) -> GossipDiscovery {
-        GossipDiscovery { heartbeat: self.heartbeat + 1, ..*self }
-    }
+pub struct WithVersion<T> {
+  _version: i32,
+  pub value: T
+}
 
-    pub fn get_heartbeat(&self) -> u32 {
-        self.heartbeat
+impl<T: Clone> WithVersion<T> {
+  pub fn new(value: &T) -> WithVersion<T> {
+    WithVersion::<T> { _version: 0, value: value.clone() }
+  }
+
+  pub fn next(&self, value: &T) -> WithVersion<T> {
+    WithVersion::<T> { _version: self._version + 1, value: value.clone() }
+  }
+}
+
+impl<T> Versioned for WithVersion<T> {
+  fn version(&self) -> i32 {
+    self._version
+  }
+}
+
+impl<T> HasMerge for T
+    where T: Versioned + Clone {
+    fn merge(&self, other: &Self) -> Self {
+    match self.version() < other.version() {
+      true => self.clone(),
+      false => other.clone()
     }
+  }
 }
